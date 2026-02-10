@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Canvas Conversations (2011) - Mock</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="layout">
+      <!-- Left Nav -->
+      <nav class="nav" aria-label="Primary">
+        <div class="title">Conversations</div>
+        <a href="#" class="active" data-nav="courses">Courses</a>
+        <a href="#" data-nav="groups">Groups</a>
+        <a href="#" data-nav="calendar">Calendar</a>
+        <a href="#" data-nav="settings">Settings</a>
+        <a href="#" data-nav="inbox">Inbox</a>
+      </nav>
+
+      <!-- Middle List -->
+      <section class="listPane" aria-label="Message list">
+        <div class="filters" role="tablist" aria-label="Filters">
+          <button class="pill active" data-filter="all" type="button" role="tab" aria-selected="true">All</button>
+          <button class="pill" data-filter="unread" type="button" role="tab" aria-selected="false">Unread</button>
+          <button class="pill" data-filter="starred" type="button" role="tab" aria-selected="false">Starred</button>
+        </div>
+
+        <div class="searchRow">
+          <input id="search" type="text" placeholder="Subject" aria-label="Search by subject" />
+        </div>
+
+        <div class="list" id="list" role="listbox" aria-label="Conversations list"></div>
+      </section>
+
+      <!-- Right Detail -->
+      <section class="detail" aria-label="Message detail">
+        <div class="detailTitle" id="detailTitle">Select a message</div>
+
+        <div class="metaRow">
+          <span class="bigStar" id="bigStar" title="Toggle star" aria-label="Toggle star" role="button" tabindex="0">☆</span>
+          <span class="muted" id="starLabel">Not starred</span>
+        </div>
+
+        <div class="metaRow">
+          <div class="metaLabel">Sent:</div>
+          <div class="metaValue" id="sentValue">—</div>
+        </div>
+
+        <div class="metaRow">
+          <div class="metaLabel">Read Status:</div>
+          <div class="metaValue" id="readValue">—</div>
+        </div>
+
+        <div class="body" id="body">—</div>
+
+        <div class="actions">
+          <button class="btn" id="toggleRead" type="button">Mark Read/Unread</button>
+          <button class="btn" id="toggleStar" type="button">Star/Unstar</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Data first, then app -->
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
