@@ -1,0 +1,175 @@
+// ─────────────────────────────────────────────────────────────────────────────
+//  components.js  –  Shared DOM rendering components
+// ─────────────────────────────────────────────────────────────────────────────
+
+const Components = (() => {
+
+  // ── HTML Escape ───────────────────────────────────────────────────────────
+  function esc(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g,  "&lt;")
+      .replace(/>/g,  "&gt;")
+      .replace(/"/g,  "&quot;")
+      .replace(/'/g,  "&#039;");
+  }
+
+  // ── SVG Icons ─────────────────────────────────────────────────────────────
+  const icons = {
+    reply:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 00-4-4H4"/></svg>`,
+    replyAll: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 17 2 12 7 7"/><polyline points="13 17 8 12 13 7"/><path d="M22 18v-2a4 4 0 00-4-4H8"/></svg>`,
+    more:     `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>`,
+    delete:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>`,
+    archive:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>`,
+    check:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`,
+    download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+    forward:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 7 20 12 15 17"/><path d="M4 18v-2a4 4 0 014-4h12"/></svg>`,
+  };
+
+  // ── Type Badge labels ─────────────────────────────────────────────────────
+  const TYPE_LABELS = {
+    "submission_comment": "Submission",
+    "announcement":       "Announcement",
+    "message":            ""
+  };
+
+  // ── Folder icon / label for folder badge ─────────────────────────────────
+  function folderBadge(m) {
+    if (m.folder === "sent")     return `<span class="folder-badge sent">Sent</span>`;
+    if (m.archived)              return `<span class="folder-badge archived">Archived</span>`;
+    if (m.type !== "message")    return `<span class="folder-badge ${m.type.replace("_","-")}">${TYPE_LABELS[m.type]}</span>`;
+    return "";
+  }
+
+  // ── Message List Row ──────────────────────────────────────────────────────
+  function renderListRow(m, isActive, searchQuery) {
+    const subjectHtml = searchQuery
+      ? highlightText(esc(m.subject), searchQuery)
+      : esc(m.subject);
+    const senderHtml = searchQuery
+      ? highlightText(esc(m.senderDisplay), searchQuery)
+      : esc(m.senderDisplay);
+
+    return `
+      <div
+        class="msg-row${isActive ? " active" : ""}${m.unread ? " unread" : ""}${m.starred ? " is-starred" : ""}"
+        data-id="${esc(m.id)}"
+        role="option"
+        aria-selected="${isActive}"
+        tabindex="0"
+      >
+        <input
+          type="checkbox"
+          class="msg-check"
+          ${m.checked ? "checked" : ""}
+          data-id="${esc(m.id)}"
+          aria-label="Select message"
+        />
+        <div class="msg-dot" aria-hidden="true"></div>
+        <div class="msg-body-wrap">
+          <div class="msg-row-top">
+            <span class="msg-sender" title="${esc(m.senderDisplay)}">${senderHtml}</span>
+            <span class="msg-date">${esc(m.displayDate)}</span>
+          </div>
+          <div class="msg-subject-line">
+            <span class="msg-subject" title="${esc(m.subject)}">${subjectHtml}</span>
+            ${m.badge > 1 ? `<span class="msg-badge">${m.badge}</span>` : ""}
+          </div>
+          <div class="msg-preview-row">
+            <span class="msg-preview">${esc(m.preview)}</span>
+            ${folderBadge(m)}
+          </div>
+        </div>
+        <button
+          class="msg-star${m.starred ? " on" : ""}"
+          data-star="${esc(m.id)}"
+          title="${m.starred ? "Unstar" : "Star"}"
+          aria-label="${m.starred ? "Unstar" : "Star"} message"
+        >${m.starred ? "★" : "☆"}</button>
+      </div>
+    `;
+  }
+
+  // ── Message Detail Pane ───────────────────────────────────────────────────
+  function renderDetail(m) {
+    if (!m) {
+      return `<div class="empty-detail">
+        <div class="empty-icon">✉️</div>
+        <div>Select a conversation to read</div>
+      </div>`;
+    }
+
+    const tags = m.courses
+      .map(c => `<span class="course-tag">${esc(c)}</span>`)
+      .join("");
+
+    const bodyHtml = esc(m.body).replace(/\n/g, "<br>");
+
+    return `
+      <div class="detail-msg">
+        <div class="detail-msg-header">
+          <div class="detail-avatar" style="background:${m.avatarColor}">
+            ${esc(m.initials)}
+          </div>
+          <div class="detail-meta">
+            <div class="detail-from-row">
+              <span class="detail-from">${esc(m.senderDisplay)}</span>
+              <div class="detail-from-actions">
+                <button class="icon-btn" title="Reply" data-action="reply">${icons.reply}</button>
+                <button class="icon-btn" title="Reply All" data-action="replyAll">${icons.replyAll}</button>
+                <button class="icon-btn" title="More" data-action="more">${icons.more}</button>
+              </div>
+            </div>
+            <div class="detail-course-tags">${tags}</div>
+            <div class="detail-timestamp">${esc(m.timestamp)}</div>
+          </div>
+        </div>
+        <div class="detail-body-text">${bodyHtml}</div>
+      </div>
+    `;
+  }
+
+  // ── Highlight text helper ─────────────────────────────────────────────────
+  function highlightText(escapedText, query) {
+    if (!query) return escapedText;
+    const safeQ = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(${safeQ})`, "gi");
+    return escapedText.replace(re, "<mark>$1</mark>");
+  }
+
+  // ── Empty state for list ──────────────────────────────────────────────────
+  function renderEmpty(msg = "No messages") {
+    return `<div class="list-empty">${esc(msg)}</div>`;
+  }
+
+  // ── Autocomplete dropdown item ────────────────────────────────────────────
+  function renderSuggestionItem(s, query, idx) {
+    const labelHtml = highlightText(esc(s.label), query);
+    const typeLabel = {
+      course:    "Course",
+      professor: "Professor",
+      subject:   "Subject"
+    }[s.type] || "";
+
+    return `
+      <div class="suggestion-item" data-idx="${idx}" role="option" tabindex="-1">
+        <span class="suggestion-icon">${s.icon}</span>
+        <span class="suggestion-label">${labelHtml}</span>
+        <span class="suggestion-type">${typeLabel}</span>
+      </div>
+    `;
+  }
+
+  return {
+    esc,
+    icons,
+    renderListRow,
+    renderDetail,
+    renderEmpty,
+    renderSuggestionItem,
+    highlightText
+  };
+
+})();
+
+window.Components = Components;
