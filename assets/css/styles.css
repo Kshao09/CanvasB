@@ -70,7 +70,7 @@ html, body {
   width: 66px;
   height: 66px;
   flex-shrink: 0;
-  background: var(--fiu-orange);
+  background: var(--nav-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -194,8 +194,8 @@ html, body {
    LIST PANE
 ═══════════════════════════════════════════════════════════════════════════ */
 .list-pane {
-  width: 460px;
-  min-width: 320px;
+  width: 560px;
+  min-width: 360px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -208,7 +208,7 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border-light);
   background: var(--white);
   flex-shrink: 0;
@@ -219,13 +219,13 @@ html, body {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 12px;
+  padding: 7px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--white);
   flex-shrink: 0;
 }
 
-/* ── Select dropdowns ───────────────────────────────────────────────────────── */
+/* ── Select dropdowns – kept compact so search gets max space ───────────────── */
 .select-wrap {
   position: relative;
   display: flex;
@@ -235,7 +235,7 @@ html, body {
 .select-wrap select {
   appearance: none;
   -webkit-appearance: none;
-  padding: 6px 24px 6px 10px;
+  padding: 7px 22px 7px 10px;
   border: 1px solid var(--border);
   border-radius: var(--r);
   font-size: 13px;
@@ -244,8 +244,7 @@ html, body {
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;
-  min-width: 110px;
-  max-width: 160px;
+  width: 118px;          /* fixed narrow width so search bar gets the rest */
   transition: border-color 0.12s;
 }
 .select-wrap select:focus {
@@ -261,7 +260,7 @@ html, body {
   pointer-events: none;
 }
 
-/* ── Search (flex: 1 so it fills remaining space) ───────────────────────────── */
+/* ── Search – flex:1 so it eats all remaining horizontal space ──────────────── */
 .search-outer {
   flex: 1;
   position: relative;
@@ -274,19 +273,19 @@ html, body {
 }
 .search-wrap .search-icon {
   position: absolute;
-  left: 9px;
-  width: 14px;
-  height: 14px;
+  left: 11px;
+  width: 15px;
+  height: 15px;
   color: var(--muted);
   pointer-events: none;
   flex-shrink: 0;
 }
 .search-wrap input {
   width: 100%;
-  padding: 6px 28px 6px 30px;
+  padding: 8px 32px 8px 34px;   /* taller + extra left pad for icon */
   border: 1px solid var(--border);
   border-radius: var(--r);
-  font-size: 13px;
+  font-size: 14px;               /* slightly larger text */
   font-family: inherit;
   color: var(--text);
   background: var(--white);
