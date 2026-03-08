@@ -1,2 +1,2 @@
-# Canvas2011
+# CanvasB
 Condition B for Canvas Inbox page
