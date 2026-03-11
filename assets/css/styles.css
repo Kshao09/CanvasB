@@ -1,10 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    styles.css  –  Canvas Inbox (FIU)
-   Nav: dark navy (#1a2c3f) matching FIU Canvas brand
-   Toolbar: two-row layout (filters+search | action buttons)
 ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Variables ─────────────────────────────────────────────────────────────── */
 :root {
   --white:          #ffffff;
   --bg:             #f4f5f5;
@@ -14,12 +11,10 @@
   --muted:          #6b7780;
   --light:          #9da6ab;
 
-  /* ── FIU nav – dark navy ── */
   --nav-bg:         #1a2c3f;
   --nav-hover:      rgba(255,255,255,0.09);
   --nav-active:     rgba(255,255,255,0.15);
 
-  /* ── FIU logo – orange ── */
   --fiu-orange:     #e66000;
 
   --blue:           #0770a3;
@@ -31,12 +26,20 @@
   --row-active-b:   #0770a3;
 
   --star-on:        #e66000;
+  --danger:         #c0392b;
+  --danger-bg:      #fff1f0;
+  --danger-border:  #f3c6c3;
+  --restore-bg:     #eef7ee;
+  --restore-border: #b8d8b8;
+  --restore-text:   #256b2a;
+  --deleted-bg:     #f6f7f8;
+
   --r:              4px;
   --font:           "Lato", "Helvetica Neue", Arial, sans-serif;
 }
 
-/* ── Reset ─────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 html, body {
   height: 100%;
   overflow: hidden;
@@ -46,12 +49,8 @@ html, body {
   background: var(--bg);
 }
 
-/* ── App shell ─────────────────────────────────────────────────────────────── */
 .app { display: flex; height: 100vh; overflow: hidden; }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   GLOBAL NAV
-═══════════════════════════════════════════════════════════════════════════ */
 .global-nav {
   width: 66px;
   flex-shrink: 0;
@@ -65,7 +64,6 @@ html, body {
 }
 .global-nav::-webkit-scrollbar { display: none; }
 
-/* FIU logo tile – orange box */
 .nav-logo {
   width: 66px;
   height: 66px;
@@ -122,9 +120,6 @@ html, body {
 
 .nav-spacer { flex: 1; }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   MAIN CONTENT
-═══════════════════════════════════════════════════════════════════════════ */
 .main {
   flex: 1;
   display: flex;
@@ -133,7 +128,6 @@ html, body {
   min-width: 0;
 }
 
-/* ── Top Bar ────────────────────────────────────────────────────────────────── */
 .topbar {
   background: var(--white);
   border-bottom: 1px solid var(--border);
@@ -187,12 +181,8 @@ html, body {
 .btn-compose:hover { background: var(--btn-dark-hov); }
 .btn-compose svg   { width: 14px; height: 14px; }
 
-/* ── Conversations layout ───────────────────────────────────────────────────── */
 .conversations { flex: 1; display: flex; overflow: hidden; }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   LIST PANE
-═══════════════════════════════════════════════════════════════════════════ */
 .list-pane {
   width: 560px;
   min-width: 360px;
@@ -203,7 +193,6 @@ html, body {
   background: var(--white);
 }
 
-/* ── Toolbar Row 1: dropdowns + search + person ─────────────────────────────── */
 .toolbar-row1 {
   display: flex;
   align-items: center;
@@ -214,7 +203,6 @@ html, body {
   flex-shrink: 0;
 }
 
-/* ── Toolbar Row 2: action buttons ──────────────────────────────────────────── */
 .toolbar-row2 {
   display: flex;
   align-items: center;
@@ -225,7 +213,6 @@ html, body {
   flex-shrink: 0;
 }
 
-/* ── Select dropdowns – kept compact so search gets max space ───────────────── */
 .select-wrap {
   position: relative;
   display: flex;
@@ -244,7 +231,7 @@ html, body {
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;
-  width: 118px;          /* fixed narrow width so search bar gets the rest */
+  width: 118px;
   transition: border-color 0.12s;
 }
 .select-wrap select:focus {
@@ -260,7 +247,6 @@ html, body {
   pointer-events: none;
 }
 
-/* ── Search – flex:1 so it eats all remaining horizontal space ──────────────── */
 .search-outer {
   flex: 1;
   position: relative;
@@ -282,10 +268,10 @@ html, body {
 }
 .search-wrap input {
   width: 100%;
-  padding: 8px 32px 8px 34px;   /* taller + extra left pad for icon */
+  padding: 8px 32px 8px 34px;
   border: 1px solid var(--border);
   border-radius: var(--r);
-  font-size: 14px;               /* slightly larger text */
+  font-size: 14px;
   font-family: inherit;
   color: var(--text);
   background: var(--white);
@@ -312,7 +298,7 @@ html, body {
 }
 .search-clear:hover { color: var(--text); }
 
-/* ── Autocomplete suggestion box ────────────────────────────────────────────── */
+/* keep autocomplete */
 #suggestionBox {
   position: absolute;
   top: calc(100% + 3px);
@@ -346,7 +332,6 @@ html, body {
 
 mark { background: #fff3a8; color: var(--text); padding: 0 1px; border-radius: 2px; }
 
-/* ── Toolbar icon buttons ────────────────────────────────────────────────────── */
 .toolbar-icon-btn {
   width: 30px;
   height: 30px;
@@ -365,9 +350,6 @@ mark { background: #fff3a8; color: var(--text); padding: 0 1px; border-radius: 2
 .toolbar-icon-btn:hover { background: #f0f0f0; color: var(--text); }
 .toolbar-icon-btn svg   { width: 15px; height: 15px; display: block; }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   MESSAGE LIST
-═══════════════════════════════════════════════════════════════════════════ */
 .msg-list {
   flex: 1;
   overflow-y: auto;
@@ -392,9 +374,22 @@ mark { background: #fff3a8; color: var(--text); padding: 0 1px; border-radius: 2
 .msg-row.active       { background: var(--row-active); border-left: 3px solid var(--row-active-b); padding-left: 5px; }
 .msg-row:focus-visible{ outline: 2px solid var(--blue); outline-offset: -2px; }
 
-/* unread dot */
+.msg-row.is-deleted {
+  background: var(--deleted-bg);
+}
+.msg-row.is-deleted .msg-sender,
+.msg-row.is-deleted .msg-subject,
+.msg-row.is-deleted .msg-preview,
+.msg-row.is-deleted .msg-date {
+  opacity: 0.78;
+}
+
+.msg-row.is-starred {
+  box-shadow: inset 3px 0 0 #f3b54a;
+}
+
 .msg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
-.msg-row.unread     .msg-dot { background: var(--text); }
+.msg-row.unread .msg-dot { background: var(--text); }
 .msg-row:not(.unread) .msg-dot { background: transparent; border: 1.5px solid var(--border); }
 
 .msg-check { width: 15px; height: 15px; flex-shrink: 0; margin-top: 3px; accent-color: var(--blue); cursor: pointer; }
@@ -428,7 +423,6 @@ mark { background: #fff3a8; color: var(--text); padding: 0 1px; border-radius: 2
 .msg-preview-row { display: flex; align-items: center; gap: 5px; }
 .msg-preview     { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
 
-/* type / folder badges */
 .folder-badge {
   font-size: 9px;
   font-weight: 700;
@@ -439,32 +433,68 @@ mark { background: #fff3a8; color: var(--text); padding: 0 1px; border-radius: 2
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
-.folder-badge.sent         { background: #d4edda; color: #155724; }
-.folder-badge.archived     { background: #e2e3e5; color: #383d41; }
+.folder-badge.sent { background: #d4edda; color: #155724; }
+.folder-badge.archived { background: #e2e3e5; color: #383d41; }
+.folder-badge.deleted { background: #f8d7da; color: #721c24; }
 .folder-badge.submission-comment { background: #cce5ff; color: #004085; }
 .folder-badge.announcement { background: #fff3cd; color: #856404; }
 
-/* star */
-.msg-star {
-  background: none;
-  border: none;
-  padding: 2px;
-  cursor: pointer;
-  font-size: 16px;
-  line-height: 1;
-  color: var(--border);
-  transition: color 0.1s, transform 0.1s;
-  flex-shrink: 0;
-  margin-top: 2px;
+.msg-actions-row {
+  margin-top: 8px;
 }
-.msg-star:hover { color: var(--star-on); transform: scale(1.15); }
-.msg-star.on    { color: var(--star-on); }
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.row-action-btn {
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--text);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  cursor: pointer;
+  line-height: 1.2;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.row-action-btn:hover {
+  background: #f4f7f9;
+}
+.star-action {
+  border-color: #f1cf8e;
+  background: #fff8ea;
+  color: #9b6400;
+}
+.star-action:hover {
+  background: #ffefc7;
+}
+.star-action.active {
+  background: #ffe3a3;
+  border-color: #e5b653;
+  color: #8a5400;
+}
+.delete-action {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+.delete-action:hover {
+  background: #ffe3e0;
+}
+.restore-action {
+  background: var(--restore-bg);
+  border-color: var(--restore-border);
+  color: var(--restore-text);
+}
+.restore-action:hover {
+  background: #dff0df;
+}
 
 .list-empty { padding: 32px 20px; text-align: center; color: var(--light); font-size: 13px; }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   DETAIL PANE
-═══════════════════════════════════════════════════════════════════════════ */
 .detail-pane {
   flex: 1;
   display: flex;
@@ -502,7 +532,6 @@ mark { background: #fff3a8; color: var(--text); padding: 0 1px; border-radius: 2
 .detail-body::-webkit-scrollbar       { width: 5px; }
 .detail-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-/* icon buttons */
 .icon-btn {
   width: 32px;
   height: 32px;
@@ -521,7 +550,6 @@ mark { background: #fff3a8; color: var(--text); padding: 0 1px; border-radius: 2
 .icon-btn:hover { background: #f0f0f0; color: var(--text); }
 .icon-btn svg   { width: 15px; height: 15px; display: block; }
 
-/* message detail card */
 .detail-msg {
   border: 1px solid var(--border-light);
   border-radius: var(--r);
@@ -555,7 +583,7 @@ mark { background: #fff3a8; color: var(--text); padding: 0 1px; border-radius: 2
   justify-content: space-between;
   gap: 8px;
 }
-.detail-from          { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; min-width: 0; word-break: break-word; }
+.detail-from { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; min-width: 0; word-break: break-word; }
 .detail-from-actions  { display: flex; gap: 2px; flex-shrink: 0; }
 
 .detail-course-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 5px 0; }
@@ -570,13 +598,40 @@ mark { background: #fff3a8; color: var(--text); padding: 0 1px; border-radius: 2
 
 .detail-timestamp { font-size: 12px; color: var(--muted); }
 
+.detail-status-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.detail-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+.detail-status-pill.starred {
+  background: #fff3d6;
+  color: #8c5a00;
+}
+.detail-status-pill.deleted {
+  background: #fde8ea;
+  color: #8f1f2d;
+}
+.detail-status-pill.archived {
+  background: #eef1f3;
+  color: #49545b;
+}
+
 .detail-body-text {
   font-size: 14px;
   color: var(--text);
   line-height: 1.65;
 }
 
-/* empty state */
 .empty-detail {
   height: 100%;
   display: flex;
@@ -588,3 +643,32 @@ mark { background: #fff3a8; color: var(--text); padding: 0 1px; border-radius: 2
   font-size: 14px;
 }
 .empty-icon { font-size: 40px; }
+
+.undo-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #1f2f3d;
+  color: var(--white);
+  padding: 12px 14px;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+  z-index: 2000;
+  font-size: 13px;
+}
+
+.undo-toast-btn {
+  border: none;
+  background: #ffd38a;
+  color: #4e3300;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.undo-toast-btn:hover {
+  background: #ffc76c;
+}

@@ -4,7 +4,6 @@
 
 const Components = (() => {
 
-  // ── HTML Escape ───────────────────────────────────────────────────────────
   function esc(str) {
     return String(str || "")
       .replace(/&/g, "&amp;")
@@ -14,7 +13,6 @@ const Components = (() => {
       .replace(/'/g,  "&#039;");
   }
 
-  // ── SVG Icons ─────────────────────────────────────────────────────────────
   const icons = {
     reply:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 00-4-4H4"/></svg>`,
     replyAll: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 17 2 12 7 7"/><polyline points="13 17 8 12 13 7"/><path d="M22 18v-2a4 4 0 00-4-4H8"/></svg>`,
@@ -26,33 +24,73 @@ const Components = (() => {
     forward:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 7 20 12 15 17"/><path d="M4 18v-2a4 4 0 014-4h12"/></svg>`,
   };
 
-  // ── Type Badge labels ─────────────────────────────────────────────────────
   const TYPE_LABELS = {
     "submission_comment": "Submission",
-    "announcement":       "Announcement",
-    "message":            ""
+    "announcement": "Announcement",
+    "message": ""
   };
 
-  // ── Folder icon / label for folder badge ─────────────────────────────────
   function folderBadge(m) {
+    if (m.folder === "deleted")  return `<span class="folder-badge deleted">Deleted</span>`;
     if (m.folder === "sent")     return `<span class="folder-badge sent">Sent</span>`;
-    if (m.archived)              return `<span class="folder-badge archived">Archived</span>`;
-    if (m.type !== "message")    return `<span class="folder-badge ${m.type.replace("_","-")}">${TYPE_LABELS[m.type]}</span>`;
+    if (m.archived || m.folder === "archived") return `<span class="folder-badge archived">Archived</span>`;
+    if (m.type !== "message")    return `<span class="folder-badge ${m.type.replace("_","-")}">${TYPE_LABELS[m.type] || ""}</span>`;
     return "";
   }
 
-  // ── Message List Row ──────────────────────────────────────────────────────
+  function renderRowActions(m) {
+    const starLabel = m.starred ? "★ Starred" : "☆ Star";
+
+    return `
+      <div class="row-actions">
+        <button
+          class="row-action-btn star-action${m.starred ? " active" : ""}"
+          data-action="star"
+          data-id="${esc(m.id)}"
+          type="button"
+          aria-label="${m.starred ? "Unstar" : "Star"} message"
+          title="${m.starred ? "Unstar" : "Star"}"
+        >${starLabel}</button>
+
+        ${m.folder !== "deleted" ? `
+          <button
+            class="row-action-btn delete-action"
+            data-action="delete"
+            data-id="${esc(m.id)}"
+            type="button"
+            aria-label="Delete message"
+            title="Delete"
+          >Delete</button>
+        ` : `
+          <button
+            class="row-action-btn restore-action"
+            data-action="restore"
+            data-id="${esc(m.id)}"
+            type="button"
+            aria-label="Restore message"
+            title="Restore"
+          >Restore</button>
+        `}
+      </div>
+    `;
+  }
+
   function renderListRow(m, isActive, searchQuery) {
     const subjectHtml = searchQuery
       ? highlightText(esc(m.subject), searchQuery)
       : esc(m.subject);
+
     const senderHtml = searchQuery
       ? highlightText(esc(m.senderDisplay), searchQuery)
       : esc(m.senderDisplay);
 
+    const previewHtml = searchQuery
+      ? highlightText(esc(m.preview), searchQuery)
+      : esc(m.preview);
+
     return `
       <div
-        class="msg-row${isActive ? " active" : ""}${m.unread ? " unread" : ""}${m.starred ? " is-starred" : ""}"
+        class="msg-row${isActive ? " active" : ""}${m.unread ? " unread" : ""}${m.starred ? " is-starred" : ""}${m.folder === "deleted" ? " is-deleted" : ""}"
         data-id="${esc(m.id)}"
         role="option"
         aria-selected="${isActive}"
@@ -66,31 +104,31 @@ const Components = (() => {
           aria-label="Select message"
         />
         <div class="msg-dot" aria-hidden="true"></div>
+
         <div class="msg-body-wrap">
           <div class="msg-row-top">
             <span class="msg-sender" title="${esc(m.senderDisplay)}">${senderHtml}</span>
             <span class="msg-date">${esc(m.displayDate)}</span>
           </div>
+
           <div class="msg-subject-line">
             <span class="msg-subject" title="${esc(m.subject)}">${subjectHtml}</span>
             ${m.badge > 1 ? `<span class="msg-badge">${m.badge}</span>` : ""}
           </div>
+
           <div class="msg-preview-row">
-            <span class="msg-preview">${esc(m.preview)}</span>
+            <span class="msg-preview">${previewHtml}</span>
             ${folderBadge(m)}
           </div>
+
+          <div class="msg-actions-row">
+            ${renderRowActions(m)}
+          </div>
         </div>
-        <button
-          class="msg-star${m.starred ? " on" : ""}"
-          data-star="${esc(m.id)}"
-          title="${m.starred ? "Unstar" : "Star"}"
-          aria-label="${m.starred ? "Unstar" : "Star"} message"
-        >${m.starred ? "★" : "☆"}</button>
       </div>
     `;
   }
 
-  // ── Message Detail Pane ───────────────────────────────────────────────────
   function renderDetail(m) {
     if (!m) {
       return `<div class="empty-detail">
@@ -99,7 +137,7 @@ const Components = (() => {
       </div>`;
     }
 
-    const tags = m.courses
+    const tags = (m.courses || [])
       .map(c => `<span class="course-tag">${esc(c)}</span>`)
       .join("");
 
@@ -108,20 +146,25 @@ const Components = (() => {
     return `
       <div class="detail-msg">
         <div class="detail-msg-header">
-          <div class="detail-avatar" style="background:${m.avatarColor}">
+          <div class="detail-avatar" style="background:${esc(m.avatarColor)}">
             ${esc(m.initials)}
           </div>
           <div class="detail-meta">
             <div class="detail-from-row">
               <span class="detail-from">${esc(m.senderDisplay)}</span>
               <div class="detail-from-actions">
-                <button class="icon-btn" title="Reply" data-action="reply">${icons.reply}</button>
-                <button class="icon-btn" title="Reply All" data-action="replyAll">${icons.replyAll}</button>
-                <button class="icon-btn" title="More" data-action="more">${icons.more}</button>
+                <button class="icon-btn" title="Reply" data-action="reply" type="button">${icons.reply}</button>
+                <button class="icon-btn" title="Reply All" data-action="replyAll" type="button">${icons.replyAll}</button>
+                <button class="icon-btn" title="More" data-action="more" type="button">${icons.more}</button>
               </div>
             </div>
             <div class="detail-course-tags">${tags}</div>
             <div class="detail-timestamp">${esc(m.timestamp)}</div>
+            <div class="detail-status-row">
+              ${m.starred ? `<span class="detail-status-pill starred">★ Starred</span>` : ""}
+              ${m.folder === "deleted" ? `<span class="detail-status-pill deleted">Deleted</span>` : ""}
+              ${(m.archived || m.folder === "archived") ? `<span class="detail-status-pill archived">Archived</span>` : ""}
+            </div>
           </div>
         </div>
         <div class="detail-body-text">${bodyHtml}</div>
@@ -129,7 +172,6 @@ const Components = (() => {
     `;
   }
 
-  // ── Highlight text helper ─────────────────────────────────────────────────
   function highlightText(escapedText, query) {
     if (!query) return escapedText;
     const safeQ = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -137,18 +179,16 @@ const Components = (() => {
     return escapedText.replace(re, "<mark>$1</mark>");
   }
 
-  // ── Empty state for list ──────────────────────────────────────────────────
   function renderEmpty(msg = "No messages") {
     return `<div class="list-empty">${esc(msg)}</div>`;
   }
 
-  // ── Autocomplete dropdown item ────────────────────────────────────────────
   function renderSuggestionItem(s, query, idx) {
     const labelHtml = highlightText(esc(s.label), query);
     const typeLabel = {
-      course:    "Course",
+      course: "Course",
       professor: "Professor",
-      subject:   "Subject"
+      subject: "Subject"
     }[s.type] || "";
 
     return `

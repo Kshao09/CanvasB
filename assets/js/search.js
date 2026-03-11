@@ -4,49 +4,45 @@
 
 class InboxSearch {
   constructor(data) {
-    this.data = data;
-    this.index = this._buildIndex(data);
+    this.data = Array.isArray(data) ? data : [];
+    this.index = this._buildIndex(this.data);
   }
 
-  // ── Index Building ──────────────────────────────────────────────────────
   _buildIndex(data) {
-    const courses   = new Set();
-    const senders   = new Set();
-    const subjects  = new Set();
-    const keywords  = new Set();
+    const courses = new Set();
+    const senders = new Set();
+    const subjects = new Set();
+    const keywords = new Set();
 
     data.forEach(m => {
-      // Courses
-      m.courses.forEach(c => courses.add(c.trim()));
+      (m.courses || []).forEach(c => courses.add(String(c || "").trim()));
 
-      // Individual sender names (split by comma)
-      m.senderList.forEach(s => {
-        const name = s.trim();
+      (m.senderList || []).forEach(s => {
+        const name = String(s || "").trim();
         if (name && name !== "You") senders.add(name);
       });
 
-      // Subject words (meaningful ones)
-      m.subject.split(/[\s\-–→]+/).forEach(w => {
-        const clean = w.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-        if (clean.length > 3) keywords.add(clean);
-      });
+      String(m.subject || "")
+        .split(/[\s\-–→]+/)
+        .forEach(w => {
+          const clean = w.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+          if (clean.length > 3) keywords.add(clean);
+        });
 
-      // Subject phrases (up to 3 words)
-      const words = m.subject.split(" ").filter(w => w.length > 2);
+      const words = String(m.subject || "").split(" ").filter(w => w.length > 2);
       for (let i = 0; i < words.length - 1; i++) {
         subjects.add(words.slice(i, i + 2).join(" "));
       }
     });
 
     return {
-      courses:  [...courses].sort(),
-      senders:  [...senders].sort(),
-      subjects: [...subjects],
-      keywords: [...keywords]
+      courses: [...courses].filter(Boolean).sort(),
+      senders: [...senders].filter(Boolean).sort(),
+      subjects: [...subjects].filter(Boolean),
+      keywords: [...keywords].filter(Boolean)
     };
   }
 
-  // ── Levenshtein Distance ─────────────────────────────────────────────────
   _levenshtein(a, b) {
     if (a === b) return 0;
     if (!a.length) return b.length;
@@ -63,21 +59,20 @@ class InboxSearch {
           : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
       }
     }
+
     return dp[a.length][b.length];
   }
 
-  // ── Fuzzy Match Score (0–100) ────────────────────────────────────────────
   _scoreField(query, text, weight = 1.0) {
     if (!text) return 0;
-    const q = query.toLowerCase().trim();
-    const t = text.toLowerCase();
+
+    const q = String(query).toLowerCase().trim();
+    const t = String(text).toLowerCase();
 
     if (!q) return 0;
 
-    // Exact substring → highest score
     if (t.includes(q)) return 100 * weight;
 
-    // Token-level partial match
     const qTokens = q.split(/\s+/);
     let tokenHits = 0;
     qTokens.forEach(tok => {
@@ -85,7 +80,6 @@ class InboxSearch {
     });
     if (tokenHits > 0) return (60 * (tokenHits / qTokens.length)) * weight;
 
-    // Fuzzy token match (Levenshtein per word pair)
     const tTokens = t.split(/\s+/);
     let maxFuzzy = 0;
 
@@ -102,35 +96,25 @@ class InboxSearch {
     return maxFuzzy > 0 ? maxFuzzy * 40 * weight : 0;
   }
 
-  // ── Search Messages ──────────────────────────────────────────────────────
   search(query) {
     if (!query || !query.trim()) return [...this.data];
 
-    const results = this.data.map(m => {
-      const score = Math.max(
-        this._scoreField(query, m.subject,                    1.0),
-        this._scoreField(query, m.senderDisplay,              0.9),
-        this._scoreField(query, m.senderList.join(" "),       0.9),
-        this._scoreField(query, m.courses.join(" "),          0.85),
-        this._scoreField(query, m.preview,                    0.6),
-        this._scoreField(query, m.body,                       0.4)
-      );
-      return { msg: m, score };
-    }).filter(r => r.score > 5);
+    const results = this.data
+      .map(m => {
+        const score = Math.max(
+          this._scoreField(query, m.subject, 1.0),
+          this._scoreField(query, m.senderDisplay, 0.9),
+          this._scoreField(query, (m.senderList || []).join(" "), 0.9),
+          this._scoreField(query, (m.courses || []).join(" "), 0.85),
+          this._scoreField(query, m.preview, 0.6),
+          this._scoreField(query, m.body, 0.4)
+        );
+        return { msg: m, score };
+      })
+      .filter(r => r.score > 5);
 
     results.sort((a, b) => b.score - a.score);
     return results.map(r => r.msg);
-  }
-
-  // ── Highlight match in a string ──────────────────────────────────────────
-  highlight(query, text) {
-    if (!query || !text) return this._esc(text);
-    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const regex = new RegExp(`(${escaped})`, "gi");
-    return this._esc(text).replace(
-      new RegExp(`(${this._esc(query)})`, "gi"),
-      (_, m) => `<mark>${m}</mark>`
-    );
   }
 
   _esc(s) {
@@ -141,17 +125,23 @@ class InboxSearch {
       .replace(/"/g, "&quot;");
   }
 
-  // ── Autocomplete Suggestions ─────────────────────────────────────────────
+  highlight(query, text) {
+    if (!query || !text) return this._esc(text);
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return this._esc(text).replace(
+      new RegExp(`(${escaped})`, "gi"),
+      "<mark>$1</mark>"
+    );
+  }
+
   getSuggestions(query) {
     if (!query || query.trim().length < 1) return [];
     const q = query.toLowerCase().trim();
     const suggestions = [];
 
-    // ── Courses ────────────────────────────────────────────────────────────
     const courseMatches = this.index.courses.filter(c => {
       const cl = c.toLowerCase();
       if (cl.includes(q)) return true;
-      // Fuzzy: check each word of course against query tokens
       return q.split(" ").some(qt =>
         cl.split(/\s+/).some(cw => {
           const maxLen = Math.max(qt.length, cw.length);
@@ -160,11 +150,10 @@ class InboxSearch {
       );
     }).slice(0, 3);
 
-    courseMatches.forEach(c =>
-      suggestions.push({ type: "course", label: c, icon: "📚" })
-    );
+    courseMatches.forEach(c => {
+      suggestions.push({ type: "course", label: c, icon: "📚" });
+    });
 
-    // ── Professors / Senders ───────────────────────────────────────────────
     const senderMatches = this.index.senders.filter(s => {
       const sl = s.toLowerCase();
       if (sl.includes(q)) return true;
@@ -176,22 +165,20 @@ class InboxSearch {
       );
     }).slice(0, 3);
 
-    senderMatches.forEach(s =>
-      suggestions.push({ type: "professor", label: s, icon: "👤" })
-    );
+    senderMatches.forEach(s => {
+      suggestions.push({ type: "professor", label: s, icon: "👤" });
+    });
 
-    // ── Subject keywords / phrases ─────────────────────────────────────────
     const subjectMatches = this.index.subjects.filter(ph => {
       return ph.toLowerCase().includes(q);
     }).slice(0, 3);
 
-    subjectMatches.forEach(ph =>
-      suggestions.push({ type: "subject", label: ph, icon: "✉️" })
-    );
+    subjectMatches.forEach(ph => {
+      suggestions.push({ type: "subject", label: ph, icon: "✉️" });
+    });
 
     return suggestions.slice(0, 8);
   }
 }
 
-// Export to global
 window.InboxSearch = InboxSearch;

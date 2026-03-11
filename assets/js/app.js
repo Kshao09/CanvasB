@@ -4,36 +4,35 @@
 (function () {
   "use strict";
 
-  // ── Mutable message state (cloned from data) ────────────────────────────
   const messages = (window.MESSAGES_DATA || []).map(m => ({ ...m }));
 
-  // ── App State ────────────────────────────────────────────────────────────
   const state = {
-    activeId:      messages[0]?.id ?? null,
-    activeCourse:  "All Courses",
-    activeFolder:  "inbox",
-    searchQuery:   "",
-    searchResults: null,   // null = not searching; array = search active
-    suggestionIdx: -1,     // keyboard nav in autocomplete
+    activeId: messages[0]?.id ?? null,
+    activeCourse: "All Courses",
+    activeFolder: "inbox",
+    searchQuery: "",
+    searchResults: null,
+    suggestionIdx: -1,
+    lastDeleted: null,
+    undoTimer: null,
   };
 
-  // ── Engine instances ─────────────────────────────────────────────────────
   const searcher = new window.InboxSearch(messages);
 
-  // ── DOM refs ─────────────────────────────────────────────────────────────
-  const msgListEl       = document.getElementById("msgList");
-  const detailBodyEl    = document.getElementById("detailBody");
-  const detailHeaderEl  = document.getElementById("detailHeader");
+  const msgListEl = document.getElementById("msgList");
+  const detailBodyEl = document.getElementById("detailBody");
+  const detailHeaderEl = document.getElementById("detailHeader");
   const detailSubjectEl = document.getElementById("detailSubject");
-  const searchInput     = document.getElementById("searchInput");
-  const searchClear     = document.getElementById("searchClear");
-  const suggestionBox   = document.getElementById("suggestionBox");
-  const courseSelect    = document.getElementById("courseSelect");
-  const folderSelect    = document.getElementById("folderSelect");
+  const searchInput = document.getElementById("searchInput");
+  const searchClear = document.getElementById("searchClear");
+  const suggestionBox = document.getElementById("suggestionBox");
+  const courseSelect = document.getElementById("courseSelect");
+  const folderSelect = document.getElementById("folderSelect");
 
-  // ── Populate selects ─────────────────────────────────────────────────────
   function initSelects() {
-    // Course options
+    courseSelect.innerHTML = "";
+    folderSelect.innerHTML = "";
+
     const courseOpts = window.Filters.getCourseOptions(messages);
     courseOpts.forEach(c => {
       const opt = document.createElement("option");
@@ -42,42 +41,36 @@
       courseSelect.appendChild(opt);
     });
 
-    // Folder options
     window.Filters.getFolderOptions().forEach(f => {
       const opt = document.createElement("option");
-      opt.value  = f.value;
+      opt.value = f.value;
       opt.textContent = f.label;
       folderSelect.appendChild(opt);
     });
   }
 
-  // ── Get currently visible messages ───────────────────────────────────────
   function getVisible() {
     return window.Filters.apply({
-      data:          messages,
-      course:        state.activeCourse,
-      folder:        state.activeFolder,
+      data: messages,
+      course: state.activeCourse,
+      folder: state.activeFolder,
       searchResults: state.searchResults,
     });
   }
 
-  // ── Ensure activeId is in visible set ────────────────────────────────────
   function clampActive(visible) {
     if (!visible.some(m => m.id === state.activeId)) {
       state.activeId = visible[0]?.id ?? null;
     }
   }
 
-  // ── Render List ───────────────────────────────────────────────────────────
   function renderList() {
     const visible = getVisible();
     clampActive(visible);
 
     if (visible.length === 0) {
       msgListEl.innerHTML = window.Components.renderEmpty(
-        state.searchQuery
-          ? `No results for "${state.searchQuery}"`
-          : "No messages"
+        state.searchQuery ? `No results for "${state.searchQuery}"` : "No messages"
       );
       return;
     }
@@ -86,15 +79,18 @@
       .map(m => window.Components.renderListRow(m, m.id === state.activeId, state.searchQuery))
       .join("");
 
-    // Row click & keyboard
     msgListEl.querySelectorAll(".msg-row").forEach(row => {
       const id = row.dataset.id;
 
       row.addEventListener("click", e => {
         if (e.target.classList.contains("msg-check")) return;
-        if (e.target.closest("[data-star]")) return;
+        if (e.target.closest(".row-action-btn")) return;
+
         const msg = messages.find(x => x.id === id);
-        if (msg) { msg.unread = false; }
+        if (msg && msg.folder !== "deleted") {
+          msg.unread = false;
+        }
+
         state.activeId = id;
         render();
       });
@@ -107,29 +103,29 @@
       });
     });
 
-    // Star buttons
-    msgListEl.querySelectorAll("[data-star]").forEach(btn => {
+    msgListEl.querySelectorAll(".row-action-btn").forEach(btn => {
       btn.addEventListener("click", e => {
         e.stopPropagation();
-        const id = btn.dataset.star;
-        const msg = messages.find(x => x.id === id);
-        if (msg) { msg.starred = !msg.starred; }
-        render();
+
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+
+        if (action === "star") toggleStar(id);
+        if (action === "delete") deleteMessage(id);
+        if (action === "restore") restoreMessage(id);
       });
     });
 
-    // Checkboxes
     msgListEl.querySelectorAll(".msg-check").forEach(chk => {
       chk.addEventListener("change", e => {
         e.stopPropagation();
         const id = chk.dataset.id;
         const msg = messages.find(x => x.id === id);
-        if (msg) { msg.checked = chk.checked; }
+        if (msg) msg.checked = chk.checked;
       });
     });
   }
 
-  // ── Render Detail ─────────────────────────────────────────────────────────
   function renderDetail() {
     const m = messages.find(x => x.id === state.activeId) ?? null;
 
@@ -144,13 +140,11 @@
     detailBodyEl.innerHTML = window.Components.renderDetail(m);
   }
 
-  // ── Full Render ───────────────────────────────────────────────────────────
   function render() {
     renderList();
     renderDetail();
   }
 
-  // ── Search Handling ───────────────────────────────────────────────────────
   function onSearchInput() {
     const q = searchInput.value.trim();
     state.searchQuery = q;
@@ -171,8 +165,8 @@
   }
 
   function clearSearch() {
-    searchInput.value  = "";
-    state.searchQuery  = "";
+    searchInput.value = "";
+    state.searchQuery = "";
     state.searchResults = null;
     searchClear.style.display = "none";
     hideSuggestions();
@@ -180,7 +174,6 @@
     searchInput.focus();
   }
 
-  // ── Autocomplete ─────────────────────────────────────────────────────────
   let currentSuggestions = [];
 
   function showSuggestions(query) {
@@ -199,7 +192,6 @@
     suggestionBox.style.display = "block";
     suggestionBox.setAttribute("aria-expanded", "true");
 
-    // Click on suggestion
     suggestionBox.querySelectorAll(".suggestion-item").forEach(item => {
       item.addEventListener("mousedown", e => {
         e.preventDefault();
@@ -220,17 +212,15 @@
     if (!s) return;
 
     if (s.type === "course") {
-      // Switch course filter
       state.activeCourse = s.label;
       courseSelect.value = s.label;
-      searchInput.value  = "";
-      state.searchQuery  = "";
+      searchInput.value = "";
+      state.searchQuery = "";
       state.searchResults = null;
       searchClear.style.display = "none";
     } else {
-      // Fill search bar with the suggestion label
-      searchInput.value   = s.label;
-      state.searchQuery   = s.label;
+      searchInput.value = s.label;
+      state.searchQuery = s.label;
       state.searchResults = searcher.search(s.label);
       searchClear.style.display = "block";
     }
@@ -242,7 +232,13 @@
   }
 
   function onSearchKeydown(e) {
-    if (currentSuggestions.length === 0) return;
+    if (currentSuggestions.length === 0) {
+      if (e.key === "Escape") {
+        hideSuggestions();
+        searchInput.blur();
+      }
+      return;
+    }
 
     const items = suggestionBox.querySelectorAll(".suggestion-item");
 
@@ -276,36 +272,135 @@
     }
   }
 
-  // ── Toolbar action buttons ────────────────────────────────────────────────
+  function toggleStar(id) {
+    const msg = messages.find(x => x.id === id);
+    if (!msg) return;
+    msg.starred = !msg.starred;
+    render();
+  }
+
+  function deleteMessage(id) {
+    const msg = messages.find(x => x.id === id);
+    if (!msg) return;
+
+    const ok = window.confirm("Are you sure you want to delete this email?");
+    if (!ok) return;
+
+    state.lastDeleted = {
+      id: msg.id,
+      previousFolder: msg.folder,
+      previousArchived: !!msg.archived,
+    };
+
+    msg.folder = "deleted";
+    msg.archived = false;
+    msg.unread = false;
+
+    if (state.activeId === id) {
+      const visibleAfterDelete = getVisible();
+      state.activeId = visibleAfterDelete.find(m => m.id !== id)?.id ?? visibleAfterDelete[0]?.id ?? null;
+    }
+
+    showUndoToast();
+    render();
+  }
+
+  function restoreMessage(id) {
+    const msg = messages.find(x => x.id === id);
+    if (!msg) return;
+
+    msg.folder = "inbox";
+    msg.archived = false;
+    state.activeId = msg.id;
+    render();
+  }
+
+  function undoDelete() {
+    if (!state.lastDeleted) return;
+
+    const msg = messages.find(x => x.id === state.lastDeleted.id);
+    if (!msg) return;
+
+    msg.folder = state.lastDeleted.previousFolder || "inbox";
+    msg.archived = !!state.lastDeleted.previousArchived;
+
+    state.activeId = msg.id;
+    state.lastDeleted = null;
+
+    removeUndoToast();
+    render();
+  }
+
+  function removeUndoToast() {
+    const toast = document.getElementById("undoToast");
+    if (toast) toast.remove();
+
+    if (state.undoTimer) {
+      clearTimeout(state.undoTimer);
+      state.undoTimer = null;
+    }
+  }
+
+  function showUndoToast() {
+    removeUndoToast();
+
+    const toast = document.createElement("div");
+    toast.id = "undoToast";
+    toast.className = "undo-toast";
+    toast.innerHTML = `
+      <span>Email moved to Deleted.</span>
+      <button type="button" class="undo-toast-btn" id="undoDeleteBtn">Undo</button>
+    `;
+
+    document.body.appendChild(toast);
+
+    document.getElementById("undoDeleteBtn")?.addEventListener("click", () => {
+      undoDelete();
+    });
+
+    state.undoTimer = setTimeout(() => {
+      state.lastDeleted = null;
+      removeUndoToast();
+    }, 5000);
+  }
+
+  function archiveActiveMessage() {
+    const msg = messages.find(x => x.id === state.activeId);
+    if (!msg) return;
+    msg.archived = true;
+    msg.folder = "archived";
+    render();
+  }
+
+  function deleteActiveMessage() {
+    if (!state.activeId) return;
+    deleteMessage(state.activeId);
+  }
+
   function wireToolbarButtons() {
     document.getElementById("replyBtn")?.addEventListener("click", () => {
       if (!state.activeId) return;
       alert("Reply (stub) – message id: " + state.activeId);
     });
+
     document.getElementById("replyAllBtn")?.addEventListener("click", () => {
       if (!state.activeId) return;
       alert("Reply All (stub) – message id: " + state.activeId);
     });
+
     document.getElementById("archiveBtn")?.addEventListener("click", () => {
-      const msg = messages.find(x => x.id === state.activeId);
-      if (!msg) return;
-      msg.archived = true;
-      msg.folder   = "archived";
-      render();
+      archiveActiveMessage();
     });
+
     document.getElementById("deleteBtn")?.addEventListener("click", () => {
-      const idx = messages.findIndex(x => x.id === state.activeId);
-      if (idx === -1) return;
-      messages.splice(idx, 1);
-      state.activeId = getVisible()[0]?.id ?? null;
-      render();
+      deleteActiveMessage();
     });
+
     document.getElementById("composeBtn")?.addEventListener("click", () => {
       alert("Compose new message (stub)");
     });
   }
 
-  // ── Nav link active state ────────────────────────────────────────────────
   function wireNav() {
     document.querySelectorAll(".nav-item").forEach(a => {
       a.addEventListener("click", e => {
@@ -316,23 +411,19 @@
     });
   }
 
-  // ── Close suggestions on outside click ───────────────────────────────────
   document.addEventListener("click", e => {
     if (!e.target.closest(".search-wrap") && !e.target.closest("#suggestionBox")) {
       hideSuggestions();
     }
   });
 
-  // ── Initialise ────────────────────────────────────────────────────────────
   function init() {
     initSelects();
-
-    // Set inbox as default in folder select
     folderSelect.value = "inbox";
 
-    searchInput.addEventListener("input",   onSearchInput);
+    searchInput.addEventListener("input", onSearchInput);
     searchInput.addEventListener("keydown", onSearchKeydown);
-    searchInput.addEventListener("focus",   () => {
+    searchInput.addEventListener("focus", () => {
       if (state.searchQuery) showSuggestions(state.searchQuery);
     });
 
